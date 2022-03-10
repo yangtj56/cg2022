@@ -77,3 +77,25 @@ while not done:
 
     button1, button2, button3 = pygame.mouse.get_pressed()
     x, y = pygame.mouse.get_
+    pt = [x, y]
+    pygame.draw.circle(screen, RED, pt, 0)
+
+    if old_pressed == -1 and pressed == 1 and old_button1 == 1 and button1 == 0 :
+        pts.append(pt) 
+        count += 1
+        pygame.draw.rect(screen, BLUE, (pt[0]-margin, pt[1]-margin, 2*margin, 2*margin), 5)
+        print("len:"+repr(len(pts))+" mouse x:"+repr(x)+" y:"+repr(y)+" button:"+repr(button1)+" pressed:"+repr(pressed)+" add pts ...")
+    else:
+        print("len:"+repr(len(pts))+" mouse x:"+repr(x)+" y:"+repr(y)+" button:"+repr(button1)+" pressed:"+repr(pressed))
+
+    if len(pts)>1:
+        drawPolylines(GREEN, 1)
+        # drawLagrangePolylines(BLUE, 10, 3)
+
+    # Go ahead and update the screen with what we've drawn.
+    # This MUST happen after all the other drawing commands.
+    pygame.display.update()
+    old_button1 = button1
+    old_pressed = pressed
+
+pygame.quit()
