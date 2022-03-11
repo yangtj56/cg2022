@@ -46,7 +46,8 @@ while not done:
     print("mouse x:"+repr(x)+" y:"+repr(y)+" tick:"+repr(time_passed)+" time:"+repr(current_time)+" loop:"+repr(loop))
     screen.blit(background, (0,0))
     screen.blit(symbol, (x-symbol_width/2, y-symbol_height/2))    
-
+    screen.blit(symbol, (x, y))   
+    screen.blit(symbol, (x-symbol_width, y))
     # Go ahead and update the screen with what we've drawn.
     # This MUST happen after all the other drawing commands.
     pygame.display.update()
