@@ -3,108 +3,113 @@ Modified on Feb 20 2020
 @author: lbg@dongseo.ac.kr
 """
 
-import itertools
-
-import numpy as np
 import pygame
-
+from sys import exit
+import numpy as np
+    
 width = 800
 height = 600
-
 pygame.init()
 screen = pygame.display.set_mode((width, height), 0, 32)
-font = pygame.font.SysFont("consolas", 20)
 
-pygame.display.set_caption(" Barycentric coordinates")
+background_image_filename = 'image/curve_pattern.png'
+
+background = pygame.image.load(background_image_filename).convert()
+width, height = background.get_size()
+screen = pygame.display.set_mode((width, height), 0, 32)
+pygame.display.set_caption("ImagePolylineMouseButton")
+font = pygame.font.SysFont("arial",16)
+
 
 # Define the colors we will use in RGB format
-BLACK = (0, 0, 0)
+BLACK = (  0,   0,   0)
 WHITE = (255, 255, 255)
-BLUE = (0, 0, 255)
-GREEN = (0, 255, 0)
-RED = (255, 0, 0)
+BLUE =  (  0,   0, 255)
+GREEN = (  0, 255,   0)
+RED =   (255,   0,   0)
 
+pta = [300,250]
+ptb = [150,300]
+ptc = [500,400]
 
-class MOUSE_BUTTON:
-    LEFT = 0
-    MIDDLE = 1
-    RIGHT = 2
-
-
-# screen.blit(background, (0,0))
+pts = []
+knots = []
+count = 0
+#screen.blit(background, (0,0))
 screen.fill(WHITE)
 
 # https://kite.com/python/docs/pygame.Surface.blit
-clock = pygame.time.Clock()
+clock= pygame.time.Clock()
 
 
-def drawPoint(pt, color=GREEN, thick=3):
+def drawPoint(pt, color='GREEN', thick=3):
+    # pygame.draw.line(screen, color, pt, pt)
     pygame.draw.circle(screen, color, pt, thick)
 
+#HW2 implement drawLine with drawPoint
+def drawLine(pt0, pt1, color='GREEN', thick=3):
+    x = pt0[0]
+    y = pt0[1]
+    x1 = pt0[0]
+    y1 = pt0[1]
+    x2 = pt1[0]
+    y2 = pt1[1]
 
-def drawLine(pt0, pt1, k=0, color=GREEN, thick=3):
-    # Numpy Implementation
-    A = np.array([pt0, pt1]).T
-    # Generate a0 and a1, with constraint a0 + a1 = 1 and a0, a1 >= 0
-    dist = np.max(A)  # np.linalg.norm(A[:, 0] - A[:, 1])
-    a0 = np.arange(0 - k, 1 + k, 1 / (dist * (k * 2)))
-    a1 = 1 - a0
-    a = np.array([a0, a1])
+    dx = abs(x2-x1)
+    dy = abs(y2-y1)
+    gradient = dy/dx
 
-    XY = (A @ a).T  # Coords for points on the line between pt0 and pt1
+    if gradient >1:
+        dx,dy = dy,dx
+        x , y = y , x
+        x1, y1 = y1, x1
+        x2, y2 = y2, x2
 
-    for x, y in XY:
-        drawPoint((x, y), color, thick)
+    p = 2 * dy - dx
 
+    for k in range(dx):
+        x = x+1 if x < x2 else x-1
+        if p>0:
+            y = y+1 if y < y2 else y -1
+            p = p+2*(dy-dx)
+        else:
+            p = p+2*dy
 
-def drawPolylines(points, color=GREEN, thick=3):
-    if len(points) < 2:
-        return
-    for i in range(len(points) - 1):
-        drawLine(points[i], points[i + 1], color, thick=1)
+        if gradient < 1:
+            drawPoint([x, y], color, thick)
+        else:
+            drawPoint([y, x], color, thick)
+    # drawPoint((100,100), color,  thick)
+    # drawPoint(pt0, color, thick)
+    # drawPoint(pt1, color, thick)
 
+def drawPolylines(color='GREEN', thick=3):
+    if(count < 2 ): return
+    for i in range(count-1):
+        drawLine(pts[i], pts[i+1], color,thick)
+        #pygame.draw.line(screen, color, pts[i], pts[i+1], thick)
 
-def drawPolyLines2(points, color=GREEN, thick=3):
-    if len(points) < 2:
-        return
-    drawLine(points[-2], points[-1], color, thick)
+def barycentric(pta,ptb,ptc,p):
+    sx = np.array([ptb[0] - pta[0],ptc[0]-pta[0],pta[0]-p[0]])
+    sy = np.array([ptb[1] - pta[1],ptc[1]-pta[1],pta[1]-p[1]])
 
-
-def draw_guidance(points):
-    for pt1, pt2 in itertools.combinations(points, 2):
-        drawLine(pt1, pt2, k=1, color=BLUE, thick=1)
-
-
-def draw_text(msg, color=BLACK, pos=(50, 50)):
-    text_surface = font.render(msg, True, pygame.Color(color), None)
-    text_rect = text_surface.get_rect()
-    text_rect.topleft = pos
-
-    pygame.draw.rect(screen, WHITE, (0, text_rect.y, width, text_rect.h))
-
-    screen.blit(text_surface, text_rect)
-
-
-def cartesian_to_barycentric(pt1, pt2, pt3, pt):
-    basis = np.array([pt1, pt2, pt3]).T
-    basis_square = np.pad(basis, ((1, 0), (0, 0)), 'constant', constant_values=1)
-
-    cartesian = np.array([1, *pt])
-
-    barycentric_coords = np.linalg.inv(basis_square) @ cartesian
-    return barycentric_coords
+    u = np.cross(sx,sy)
+    return  1 - (u[0] + u[1]) / u[2], u[0] / u[2], u[1] / u[2]
 
 
-# Loop until the user clicks the close button.
+#Loop until the user clicks the close button.
 done = False
+pressed = 0
 margin = 6
-pts = []
-button = prev_button = (False, False, False)
+old_pressed = 0
+old_button1 = 0
 
-
-def is_clicked(btn_idx: int):
-    return button[btn_idx] and not prev_button[btn_idx]
-
+pygame.draw.rect(screen, BLUE, (pta[0] - margin, pta[1] - margin, 2 * margin, 2 * margin), 5)
+pygame.draw.rect(screen, BLUE, (ptb[0] - margin, ptb[1] - margin, 2 * margin, 2 * margin), 5)
+pygame.draw.rect(screen, BLUE, (ptc[0] - margin, ptc[1] - margin, 2 * margin, 2 * margin), 5)
+drawLine(pta, ptb, GREEN, 1)
+drawLine(pta, ptc, GREEN, 1)
+drawLine(ptb, ptc, GREEN, 1)
 
 while not done:
     # This limits the while loop to a max of 10 times per second.
@@ -112,43 +117,42 @@ while not done:
     time_passed = clock.tick(30)
 
     for event in pygame.event.get():
-        if event.type == pygame.QUIT:
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            pressed = -1
+        elif event.type == pygame.MOUSEBUTTONUP:
+            pressed = 1
+        elif event.type == pygame.QUIT:
             done = True
+        else:
+            pressed = 0
 
-    button = pygame.mouse.get_pressed()
+    button1, button2, button3 = pygame.mouse.get_pressed()
     x, y = pygame.mouse.get_pos()
-    pt = (x, y)
-    pygame.draw.circle(screen, RED, pt, 0)
+    pt = [x, y]
+    
+    # 鼠标通过痕迹
+    # a,b,c = barycentric(pta,ptb,ptc,pt)
+    # print("pt mouse x:" + repr(x) + " y:" + repr(y) + " --(" + repr(a) + " ," + repr(b) + " ," + repr(c)+")")
+    # pygame.draw.circle(screen, RED, pt, 3)
 
-    # print("len:" + repr(len(pts)) + " mouse x:" + repr(x) + " y:" + repr(y) +
-    #       " button:" + repr(button[0]) + " pressed:" + repr(button))
+    text_Surface = font.render("mouse x:" + repr(x), False, GREEN)
+    screen.blit(text_Surface, [0, 0])
 
-    if is_clicked(MOUSE_BUTTON.LEFT):
-        if len(pts) >= 3:
-            continue
+    # 鼠标按下画小矩形
+    # if old_pressed == -1 and pressed == 1 and old_button1 == 1 and button1 == 0 :
+    #     pts.append(pt)
+    #     count += 1
+    #     pygame.draw.rect(screen, BLUE, (pt[0]-margin, pt[1]-margin, 2*margin, 2*margin), 5)
+    #     print("len:"+repr(len(pts))+" mouse x:"+repr(x)+" y:"+repr(y)+" button:"+repr(button1)+" pressed:"+repr(pressed)+" add pts ...")
+    # else:
+    #     print("len:"+repr(len(pts))+" mouse x:"+repr(x)+" y:"+repr(y)+" button:"+repr(button1)+" pressed:"+repr(pressed))
 
-        pts.append(pt)
-        pygame.draw.rect(
-            screen, RED, (pt[0] - margin, pt[1] - margin, 2 * margin, 2 * margin), 5)
-        # drawPolyLines2(pts, GREEN, 1)
-        draw_guidance(pts)
-
-    elif is_clicked(MOUSE_BUTTON.RIGHT):
-        pts.clear()
-        screen.fill(WHITE)
-
-    # 鼠标位置显示信息等
-    # if len(pts) == 3:   
-    #     bc_u, bc_v, bc_w = cartesian_to_barycentric(*pts, pt)
-    #     draw_text(f'pt0 {pts[0]}', color=GREEN, pos=(10, 10))
-    #     draw_text(f'pt1 {pts[1]}', color=GREEN, pos=(10, 30))
-    #     draw_text(f'pt2 {pts[2]}', color=GREEN, pos=(10, 50))
-    #     draw_text(f'pt  {pt}--({bc_u:.2f},{bc_v:.2f},{bc_w:.2f})', color=GREEN, pos=(10, 70))
-
-    prev_button = button
+    # drawLagrangePolylines(BLUE, 10, 3)
 
     # Go ahead and update the screen with what we've drawn.
     # This MUST happen after all the other drawing commands.
     pygame.display.update()
+    old_button1 = button1
+    old_pressed = pressed
 
 pygame.quit()
