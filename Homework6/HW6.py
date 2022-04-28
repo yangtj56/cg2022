@@ -18,7 +18,7 @@ pygame.init()
 screen = pygame.display.set_mode((width, height), 0, 32)
 font = pygame.font.SysFont("consolas", 20)
 
-pygame.display.set_caption("ImagePolylineMouseButton")
+pygame.display.set_caption("ImagePolylineMouseButton-Hermite")
 
 # Define the colors we will use in RGB format
 BLACK = (0, 0, 0)
